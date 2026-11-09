@@ -35,11 +35,15 @@ const toDraw = (d) => ({
   bonus: d.bnsWnNo,
   firstWinners: d.rnk1WnNope,
   firstPrize: d.rnk1WnAmt,
+  // 1~5등별 [당첨자 수, 1인당 당첨금, 등수별 총 당첨금]
+  ranks: [1, 2, 3, 4, 5].map((k) => [d[`rnk${k}WnNope`], d[`rnk${k}WnAmt`], d[`rnk${k}SumWnAmt`]]),
 });
 
 const existing = existsSync(JSON_PATH) ? JSON.parse(readFileSync(JSON_PATH, 'utf8')) : [];
 const byRound = new Map(existing.map((d) => [d.round, d]));
-const knownMax = existing.reduce((m, d) => Math.max(m, d.round), 0);
+// 등수별 당첨금(ranks)이 없는 옛 형식 데이터가 있으면 전체를 다시 받습니다
+const complete = existing.every((d) => Array.isArray(d.ranks));
+const knownMax = complete ? existing.reduce((m, d) => Math.max(m, d.round), 0) : 0;
 
 // 최신 회차부터 과거로 10개씩 내려가며, 이미 가진 회차에 닿으면 멈춥니다
 let cursor = null;
@@ -52,7 +56,8 @@ if (!page.length) {
 let added = 0;
 while (page.length) {
   for (const d of page) {
-    if (!byRound.has(d.ltEpsd)) { byRound.set(d.ltEpsd, toDraw(d)); added++; }
+    if (!byRound.has(d.ltEpsd)) added++;
+    byRound.set(d.ltEpsd, toDraw(d));
   }
   const minRound = Math.min(...page.map((d) => d.ltEpsd));
   if (minRound <= 1 || minRound <= knownMax) break;
@@ -72,14 +77,15 @@ mkdirSync(DATA_DIR, { recursive: true });
 writeFileSync(JSON_PATH, JSON.stringify(draws, null, 0).replace(/},{/g, '},\n{') + '\n');
 writeFileSync(
   CSV_PATH,
-  '﻿회차,추첨일,번호1,번호2,번호3,번호4,번호5,번호6,보너스,1등당첨자수,1등당첨금\n' +
-    draws.map((d) => [d.round, d.date, ...d.numbers, d.bonus, d.firstWinners, d.firstPrize].join(',')).join('\n') + '\n'
+  '﻿회차,추첨일,번호1,번호2,번호3,번호4,번호5,번호6,보너스,' +
+    [1, 2, 3, 4, 5].map((k) => `${k}등당첨자수,${k}등1인당당첨금`).join(',') + '\n' +
+    draws.map((d) => [d.round, d.date, ...d.numbers, d.bonus, ...d.ranks.flatMap(([n, a]) => [n, a])].join(',')).join('\n') + '\n'
 );
 // 브라우저에서 파일로 바로 열어도(file://) 읽을 수 있도록 JS 파일로도 저장
 writeFileSync(
   JS_PATH,
   '// 자동 생성 파일 — scripts/update-data.mjs로 갱신하세요\n' +
-    `window.LOTTO_DRAWS = ${JSON.stringify(draws.map((d) => [d.round, d.date, ...d.numbers, d.bonus, d.firstWinners, d.firstPrize]))};\n`
+    `window.LOTTO_DRAWS = ${JSON.stringify(draws.map((d) => [d.round, d.date, ...d.numbers, d.bonus, ...d.ranks.flatMap(([n, a]) => [n, a])]))};\n`
 );
 console.log(`\n완료: 총 ${draws.length}회차 (1~${draws.at(-1).round}회), 새로 추가 ${added}회차`);
 

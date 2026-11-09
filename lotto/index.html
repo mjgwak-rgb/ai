@@ -148,6 +148,18 @@
   .countdown.closed .cd-time { color: #e8590c; }
   .countdown.live .cd-time { font-size: 28px; color: var(--include); }
   @media (max-width: 560px) { .cd-time { font-size: 34px; } .cd-time .unit { font-size: 18px; } }
+  .round-nav { display: inline-flex; gap: 4px; align-items: center; }
+  .round-nav button { padding: 6px 12px; font-size: 16px; line-height: 1; }
+  .round-nav select { padding: 6px 10px; font-size: 14px; }
+  .table-wrap { overflow-x: auto; margin-top: 12px; }
+  table.prize { width: 100%; border-collapse: collapse; font-size: 14px; }
+  table.prize th { text-align: left; color: var(--muted); font-weight: 600; font-size: 12px; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.prize td { padding: 10px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  table.prize tr:last-child td { border-bottom: 0; }
+  table.prize .num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.prize td.amt { font-weight: 700; }
+  table.prize tr.top td.amt { color: #e8590c; font-size: 16px; }
+  table.prize .cond { color: var(--muted); }
   #banner:empty { display: none; }
   #banner {
     border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; font-size: 15px;
@@ -219,6 +231,26 @@
 
   <section class="card">
     <div class="row head">
+      <h2>회차별 당첨 결과 · 1인당 당첨금</h2>
+      <span class="spacer"></span>
+      <div class="round-nav">
+        <button class="ghost" id="prevRound" aria-label="이전 회차">‹</button>
+        <select id="roundSel" aria-label="회차 선택"></select>
+        <button class="ghost" id="nextRound" aria-label="다음 회차">›</button>
+      </div>
+    </div>
+    <div class="latest" id="latest"></div>
+    <div class="table-wrap">
+      <table class="prize">
+        <thead><tr><th>등수</th><th>당첨 조건</th><th class="num">당첨자 수</th><th class="num">1인당 당첨금</th></tr></thead>
+        <tbody id="prizeBody"></tbody>
+      </table>
+    </div>
+    <div class="hint" id="prizeNote"></div>
+  </section>
+
+  <section class="card">
+    <div class="row head">
       <h2>역대 당첨번호 통계</h2>
       <span class="spacer"></span>
       <div class="seg" id="range">
@@ -227,7 +259,6 @@
         <button data-n="50">최근 50회</button>
       </div>
     </div>
-    <div class="latest" id="latest"></div>
     <div class="chart" id="chart"></div>
     <div class="rank">
       <div><h3>가장 많이 나온 번호</h3><div class="balls" id="hot"></div></div>
@@ -263,8 +294,13 @@
 <script src="data/draws.js"></script>
 <script>
   // ───────── 데이터 ─────────
-  // LOTTO_DRAWS 원소: [회차, 추첨일, n1..n6, 보너스, 1등 당첨자 수, 1등 1인당 당첨금]
-  const DRAWS = (window.LOTTO_DRAWS || []).map(d => ({ round: d[0], date: d[1], nums: d.slice(2, 8), bonus: d[8], firstPrize: d[10] || 0 }));
+  // LOTTO_DRAWS 원소: [회차, 추첨일, n1..n6, 보너스, 1등 당첨자 수, 1등 1인당 당첨금, 2등 …, …, 5등 당첨자 수, 5등 1인당 당첨금]
+  const DRAWS = (window.LOTTO_DRAWS || []).map(d => ({
+    round: d[0], date: d[1], nums: d.slice(2, 8), bonus: d[8], firstPrize: d[10] || 0,
+    // prizes[k] = [k등 당첨자 수, k등 1인당 당첨금] (k = 1~5), 데이터가 없으면 null
+    prizes: d.length >= 19 ? [null, ...[0, 1, 2, 3, 4].map(i => [d[9 + i * 2], d[10 + i * 2]])] : null,
+  }));
+  const prizeOf = (d, rank) => (d.prizes && rank ? d.prizes[rank][1] : 0);
   const HAS_DATA = DRAWS.length > 0;
   const MAX_INCLUDE = 5;
   const HISTORY_KEY = 'lotto-history-v1';
@@ -423,14 +459,46 @@
       : '당첨번호 데이터(data/draws.js)를 찾지 못해 완전 무작위로만 생성해요.';
   }
 
+  // ───────── 회차별 당첨금 ─────────
+  const RANK_COND = ['', '6개 번호 일치', '5개 + 보너스 번호 일치', '5개 번호 일치', '4개 번호 일치', '3개 번호 일치'];
+  function initRoundSelect() {
+    if (!HAS_DATA) return;
+    $('roundSel').innerHTML = [...DRAWS].reverse().map(d => `<option value="${d.round}">${d.round}회 (${d.date})</option>`).join('');
+    $('roundSel').onchange = () => renderPrize(+$('roundSel').value);
+    $('prevRound').onclick = () => renderPrize(+$('roundSel').value - 1);
+    $('nextRound').onclick = () => renderPrize(+$('roundSel').value + 1);
+    renderPrize(LAST_ROUND);
+  }
+  function renderPrize(r) {
+    const d = DRAW_BY_ROUND.get(r);
+    if (!d) return;
+    $('roundSel').value = r;
+    $('prevRound').disabled = r <= DRAWS[0].round;
+    $('nextRound').disabled = r >= LAST_ROUND;
+    $('latest').innerHTML = `
+      <div class="info"><b>${d.round}회</b> 당첨번호 (${d.date})</div>
+      <div class="balls">${d.nums.map(n => ballHTML(n, 'sm')).join('')}<span class="plus">+</span>${ballHTML(d.bonus, 'sm')}</div>`;
+    if (!d.prizes) {
+      $('prizeBody').innerHTML = '<tr><td colspan="4" class="cond">당첨금 데이터가 없어요. update-data.mjs로 데이터를 갱신해 주세요.</td></tr>';
+      $('prizeNote').textContent = '';
+      return;
+    }
+    $('prizeBody').innerHTML = [1, 2, 3, 4, 5].map(k => {
+      const [n, amt] = d.prizes[k];
+      return `<tr class="${k === 1 ? 'top' : ''}"><td><b>${k}등</b></td><td class="cond">${RANK_COND[k]}</td>
+        <td class="num">${fmt(n)}명</td><td class="num amt">${n ? fmt(amt) + '원' : '-'}</td></tr>`;
+    }).join('');
+    const [n1, a1] = d.prizes[1];
+    $('prizeNote').textContent = n1
+      ? `1등 ${fmt(n1)}명이 1인당 ${fmt(a1)}원씩 받았어요 (1등 총 ${fmt(n1 * a1)}원). 금액은 세금을 떼기 전 기준이에요.`
+      : '이 회차는 1등 당첨자가 없어 1등 당첨금이 다음 회차로 이월됐어요.';
+  }
+
   // ───────── 통계 ─────────
   let range = 0;
   function renderStats() {
     if (!HAS_DATA) { $('chart').innerHTML = '<div class="empty">데이터가 없어요</div>'; return; }
     const last = DRAWS[DRAWS.length - 1];
-    $('latest').innerHTML = `
-      <div class="info"><b>${last.round}회</b> 당첨번호 (${last.date})</div>
-      <div class="balls">${last.nums.map(n => ballHTML(n, 'sm')).join('')}<span class="plus">+</span>${ballHTML(last.bonus, 'sm')}</div>`;
 
     const src = range ? DRAWS.slice(-range) : DRAWS;
     const f = freqOf(src);
@@ -596,7 +664,7 @@
         const rank = rankOf(g, d);
         const balls = g.map(n => ballHTML(n, 'sm ' + (d.nums.includes(n) ? '' : n === d.bonus && rank === 2 ? 'bonus-hit' : 'dim'))).join('');
         const cls = rank === 0 ? '' : rank <= 3 ? 'big' : 'win';
-        return `<div class="hist-item"><div class="balls">${balls}</div><span class="badge ${cls}">${RANK_LABEL[rank]}</span></div>`;
+        return `<div class="hist-item"><div class="balls">${balls}</div><span class="badge ${cls}">${RANK_LABEL[rank]}${rank && d.prizes ? ' · ' + fmt(prizeOf(d, rank)) + '원' : ''}</span></div>`;
       }).join('');
       const winLine = d ? `<div class="hist-item" style="font-size:12px;color:var(--muted)">당첨번호 <div class="balls">${d.nums.map(n => ballHTML(n, 'sm')).join('')}<span class="plus">+</span>${ballHTML(d.bonus, 'sm')}</div></div>` : '';
       return `<div class="hist-head"><b>${r}회</b> (${drawDate(r)} 추첨) · ${status} · 저장 ${new Date(h.t).toLocaleString('ko-KR')}</div>${winLine}${rows}`;
@@ -625,9 +693,13 @@
       if (wins.length) {
         el.className = 'win';
         html = `🎉 <b>${r}회 당첨!</b> 저장한 ${ranks.length}게임 중 ${counts.join(', ')}`;
-        if (ranks.includes(1) && d.firstPrize) html += `<div class="small">1등 1게임당 당첨금 ${fmt(d.firstPrize)}원</div>`;
-        else if (wins.every(x => x >= 4)) html += `<div class="small">4등 50,000원 · 5등 5,000원 (고정 금액)</div>`;
-        else html += `<div class="small">2·3등 당첨금은 <a href="https://www.dhlottery.co.kr/lt645/result" target="_blank" rel="noopener" style="color:inherit">동행복권</a>에서 확인하세요</div>`;
+        if (d.prizes) {
+          const total = wins.reduce((s, k) => s + prizeOf(d, k), 0);
+          const detail = [1, 2, 3, 4, 5].filter(k => wins.includes(k)).map(k => `${k}등 1인당 ${fmt(prizeOf(d, k))}원`).join(' · ');
+          html += `<div class="small">총 당첨금 <b>${fmt(total)}원</b> (${detail}, 세전)</div>`;
+        } else {
+          html += `<div class="small">당첨금은 <a href="https://www.dhlottery.co.kr/lt645/result" target="_blank" rel="noopener" style="color:inherit">동행복권</a>에서 확인하세요</div>`;
+        }
       } else {
         html = `<b>${r}회</b> 결과: 저장한 ${ranks.length}게임 모두 낙첨이에요.`;
       }
@@ -688,6 +760,7 @@
   tickCountdown();
   setInterval(tickCountdown, 1000);
   renderGrid();
+  initRoundSelect();
   renderStats();
   renderHistory();
   generate();
