@@ -32,6 +32,11 @@
     line-height: 1.5;
   }
   main { max-width: 800px; margin: 0 auto; padding: 32px 16px 64px; }
+  .brand {
+    display: inline-flex; align-items: center; background: #fff; border-radius: 12px;
+    padding: 10px 14px; margin-bottom: 16px; border: 1px solid var(--line);
+  }
+  .brand img { display: block; height: 30px; width: auto; }
   h1 { font-size: 28px; margin: 0 0 4px; }
   .sub { color: var(--muted); margin: 0 0 24px; }
   .card {
@@ -143,6 +148,9 @@
 </head>
 <body>
 <main>
+  <a class="brand" href="https://www.dhlottery.co.kr/" target="_blank" rel="noopener" title="동행복권 공식 사이트로 이동">
+    <img src="assets/logo-donghang.svg" alt="동행복권" width="161" height="38">
+  </a>
   <h1>🎱 로또 6/45 번호 생성기</h1>
   <p class="sub" id="sub">역대 당첨번호 통계를 반영해 번호를 뽑아요.</p>
 
@@ -214,7 +222,8 @@
     <div id="history"></div>
   </section>
 
-  <p class="note">통계는 참고용이에요. 매 회차 추첨은 서로 독립이라 어떤 방식으로 골라도 1등 확률은 똑같이 1/8,145,060이에요.</p>
+  <p class="note">통계는 참고용이에요. 매 회차 추첨은 서로 독립이라 어떤 방식으로 골라도 1등 확률은 똑같이 1/8,145,060이에요.<br>
+    이 페이지는 동행복권과 관계없는 개인 프로젝트예요. 로고와 당첨번호의 출처는 <a href="https://www.dhlottery.co.kr/" target="_blank" rel="noopener" style="color:inherit">동행복권</a>이에요.</p>
 </main>
 <div class="toast" id="toast"></div>
 
