@@ -1,8 +1,10 @@
 // 동행복권 공식 사이트에서 로또 6/45 역대 당첨번호를 받아 data/ 폴더에 저장합니다.
-// 사용법: node lotto/scripts/update-data.mjs
+// 사용법: node lotto/scripts/update-data.mjs [--open]
+//   --open: 새 회차가 추가되면 브라우저로 페이지를 열어 당첨 결과를 보여줍니다
 // 이미 저장된 회차는 건너뛰고 새 회차만 받아옵니다.
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -77,6 +79,12 @@ writeFileSync(
 writeFileSync(
   JS_PATH,
   '// 자동 생성 파일 — scripts/update-data.mjs로 갱신하세요\n' +
-    `window.LOTTO_DRAWS = ${JSON.stringify(draws.map((d) => [d.round, d.date, ...d.numbers, d.bonus]))};\n`
+    `window.LOTTO_DRAWS = ${JSON.stringify(draws.map((d) => [d.round, d.date, ...d.numbers, d.bonus, d.firstWinners, d.firstPrize]))};\n`
 );
 console.log(`\n완료: 총 ${draws.length}회차 (1~${draws.at(-1).round}회), 새로 추가 ${added}회차`);
+
+if (added > 0 && process.argv.includes('--open')) {
+  const page = join(ROOT, 'index.html');
+  if (process.platform === 'win32') spawn('cmd', ['/c', 'start', '', page], { detached: true, stdio: 'ignore' }).unref();
+  else spawn(process.platform === 'darwin' ? 'open' : 'xdg-open', [page], { detached: true, stdio: 'ignore' }).unref();
+}
