@@ -112,7 +112,7 @@
         <option selected>5</option><option>10</option>
       </select>
       <span class="spacer"></span>
-      <button class="primary" id="gen">번호 생성</button>
+      <button class="primary" id="gen">다시 생성</button>
     </div>
   </section>
 
@@ -269,8 +269,11 @@
     if ((e.key === 'Enter' || e.key === ' ') && e.target === document.body) { e.preventDefault(); generate(); }
   });
 
+  $('count').onchange = generate;
+
   renderGrid();
   renderHistory();
+  generate(); // 페이지를 열면 바로 자동 생성
 </script>
 </body>
 </html>
