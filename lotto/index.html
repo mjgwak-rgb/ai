@@ -11,7 +11,10 @@
     --text: #1d2129;
     --muted: #6b7280;
     --line: #e5e7eb;
+    --grid: #eef0f3;
     --accent: #2f6fed;
+    --bar: #5b8def;
+    --bar-hi: #1f4fbf;
     --include: #16a34a;
     --exclude: #dc2626;
     --b1: #fbc400; --b2: #69c8f2; --b3: #ff7272; --b4: #aaaaaa; --b5: #b0d840;
@@ -19,6 +22,7 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #111318; --card: #1b1e25; --text: #e8eaed; --muted: #9aa0a6; --line: #2c313a;
+      --grid: #242832; --bar: #6f9cf5; --bar-hi: #b4cbff;
     }
   }
   * { box-sizing: border-box; }
@@ -27,15 +31,16 @@
     font-family: "Pretendard", "Malgun Gothic", system-ui, -apple-system, sans-serif;
     line-height: 1.5;
   }
-  main { max-width: 760px; margin: 0 auto; padding: 32px 16px 64px; }
+  main { max-width: 800px; margin: 0 auto; padding: 32px 16px 64px; }
   h1 { font-size: 28px; margin: 0 0 4px; }
   .sub { color: var(--muted); margin: 0 0 24px; }
   .card {
     background: var(--card); border: 1px solid var(--line); border-radius: 14px;
     padding: 20px; margin-bottom: 16px;
   }
-  .card h2 { font-size: 16px; margin: 0 0 12px; }
+  .card h2 { font-size: 16px; margin: 0; }
   .row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .head { margin-bottom: 12px; }
   label { color: var(--muted); font-size: 14px; }
   select, button {
     font: inherit; border-radius: 10px; border: 1px solid var(--line);
@@ -47,8 +52,13 @@
   }
   button.primary:active { transform: translateY(1px); }
   button.ghost { background: transparent; }
+  .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+  .seg button { border: 0; border-radius: 0; padding: 6px 12px; font-size: 13px; }
+  .seg button.on { background: var(--accent); color: #fff; }
   .spacer { flex: 1; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 10px; }
 
+  /* 번호판 */
   .grid { display: grid; grid-template-columns: repeat(9, 1fr); gap: 6px; }
   .cell {
     aspect-ratio: 1; border-radius: 50%; border: 2px solid var(--line);
@@ -58,54 +68,94 @@
   }
   .cell.inc { background: var(--include); border-color: var(--include); color: #fff; }
   .cell.exc { background: transparent; border-color: var(--exclude); color: var(--exclude); text-decoration: line-through; opacity: .7; }
-  .legend { display: flex; gap: 16px; font-size: 13px; color: var(--muted); margin-top: 10px; flex-wrap: wrap; }
   .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 
-  .game {
-    display: flex; align-items: center; gap: 10px; padding: 10px 0;
-    border-bottom: 1px dashed var(--line);
-  }
+  /* 결과 */
+  .game { padding: 12px 0; border-bottom: 1px dashed var(--line); }
   .game:last-child { border-bottom: 0; }
-  .tag { width: 28px; color: var(--muted); font-weight: 700; }
-  .balls { display: flex; gap: 8px; flex-wrap: wrap; }
+  .game-top { display: flex; align-items: center; gap: 10px; }
+  .tag { width: 24px; color: var(--muted); font-weight: 700; flex: none; }
+  .meta { color: var(--muted); font-size: 12px; margin: 6px 0 0 34px; }
+  .meta b { color: var(--text); font-weight: 600; }
+  .balls { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
   .ball {
     width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-weight: 800; color: #fff; font-size: 17px;
+    font-weight: 800; color: #fff; font-size: 17px; flex: none;
     text-shadow: 0 1px 2px rgba(0,0,0,.35);
     box-shadow: inset -4px -4px 8px rgba(0,0,0,.15), inset 3px 3px 6px rgba(255,255,255,.35);
     animation: pop .35s ease-out both;
   }
   .ball.fixed { outline: 3px solid var(--include); outline-offset: 2px; }
   .ball.sm { width: 30px; height: 30px; font-size: 12px; animation: none; }
+  .plus { color: var(--muted); font-weight: 700; }
   @keyframes pop { from { transform: scale(0) rotate(-90deg); opacity: 0; } to { transform: scale(1) rotate(0); opacity: 1; } }
   .c1 { background: var(--b1); } .c2 { background: var(--b2); } .c3 { background: var(--b3); }
   .c4 { background: var(--b4); } .c5 { background: var(--b5); }
 
+  /* 통계 */
+  .latest { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+  .latest .info { font-size: 14px; color: var(--muted); }
+  .latest .info b { color: var(--text); font-size: 16px; }
+  .chart { position: relative; margin-top: 16px; padding-left: 30px; }
+  .plot { position: relative; height: 180px; border-bottom: 1px solid var(--line); }
+  .gridline { position: absolute; left: 0; right: 0; border-top: 1px solid var(--grid); }
+  .gridline span { position: absolute; left: -30px; width: 24px; text-align: right; top: -8px; font-size: 11px; color: var(--muted); }
+  .avgline { position: absolute; left: 0; right: 0; border-top: 1.5px dashed var(--muted); opacity: .7; z-index: 1; pointer-events: none; }
+    .chart-legend { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .chart-legend i { display: inline-block; width: 18px; border-top: 1.5px dashed var(--muted); vertical-align: middle; margin-right: 4px; }
+  .bars { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 2px; }
+  .bar-hit { flex: 1; height: 100%; display: flex; align-items: flex-end; cursor: default; }
+  .bar { width: 100%; background: var(--bar); border-radius: 4px 4px 0 0; transition: background .1s; }
+  .bar-hit:hover .bar, .bar-hit.on .bar { background: var(--bar-hi); }
+  .xlabels { display: flex; gap: 2px; margin-top: 4px; }
+  .xlabels span { flex: 1; text-align: center; font-size: 10px; color: var(--muted); }
+  .tip {
+    position: absolute; pointer-events: none; background: var(--text); color: var(--card);
+    font-size: 12px; padding: 6px 10px; border-radius: 8px; white-space: nowrap;
+    transform: translate(-50%, -100%); opacity: 0; transition: opacity .1s; z-index: 2;
+  }
+  .rank { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .rank h3 { font-size: 13px; color: var(--muted); font-weight: 600; margin: 0 0 8px; }
+  .rank .balls { gap: 6px; }
+  .stat-list { margin: 16px 0 0; padding: 0; list-style: none; font-size: 14px; }
+  .stat-list li { padding: 6px 0; border-top: 1px solid var(--line); display: flex; justify-content: space-between; gap: 12px; }
+  .stat-list li span:last-child { color: var(--muted); text-align: right; }
+
   .empty { color: var(--muted); text-align: center; padding: 24px 0; }
-  .hist-item { display: flex; gap: 10px; align-items: center; padding: 6px 0; flex-wrap: wrap; }
-  .hist-time { color: var(--muted); font-size: 12px; width: 100%; margin-top: 8px; }
+  .hist-time { color: var(--muted); font-size: 12px; margin-top: 8px; }
+  .hist-item { padding: 4px 0; }
   .toast {
     position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%);
     background: #111; color: #fff; padding: 10px 18px; border-radius: 10px; font-size: 14px;
-    opacity: 0; transition: opacity .2s; pointer-events: none;
+    opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 10;
   }
   .toast.show { opacity: 1; }
   .note { color: var(--muted); font-size: 12px; margin-top: 24px; text-align: center; }
 
-  @media (max-width: 520px) {
+  @media (max-width: 560px) {
     .grid { grid-template-columns: repeat(7, 1fr); }
-    .ball { width: 38px; height: 38px; font-size: 15px; }
-    .balls { gap: 6px; }
+    .ball { width: 36px; height: 36px; font-size: 14px; }
+    .balls { gap: 5px; }
+    .xlabels span:not(.major) { visibility: hidden; }
+    .rank { grid-template-columns: 1fr; }
   }
 </style>
 </head>
 <body>
 <main>
   <h1>🎱 로또 6/45 번호 생성기</h1>
-  <p class="sub">1~45 중 중복 없이 6개 번호를 무작위로 뽑습니다.</p>
+  <p class="sub" id="sub">역대 당첨번호 통계를 반영해 번호를 뽑아요.</p>
 
   <section class="card">
     <div class="row">
+      <label for="mode">생성 방식</label>
+      <select id="mode">
+        <option value="pattern" selected>패턴 맞춤 (역대 당첨 패턴 범위)</option>
+        <option value="hot">많이 나온 번호 위주 + 패턴</option>
+        <option value="cold">적게 나온 번호 위주 + 패턴</option>
+        <option value="recent">최근 50회 흐름 + 패턴</option>
+        <option value="random">완전 무작위</option>
+      </select>
       <label for="count">게임 수</label>
       <select id="count">
         <option>1</option><option>2</option><option>3</option><option>4</option>
@@ -114,43 +164,66 @@
       <span class="spacer"></span>
       <button class="primary" id="gen">다시 생성</button>
     </div>
+    <div class="hint" id="modeHint"></div>
   </section>
 
   <section class="card">
-    <div class="row">
-      <h2 style="margin:0">생성 결과</h2>
+    <div class="row head">
+      <h2>생성 결과</h2>
       <span class="spacer"></span>
       <button class="ghost" id="copy">복사</button>
     </div>
-    <div id="result"><div class="empty">‘번호 생성’ 버튼을 눌러보세요</div></div>
+    <div id="result"></div>
   </section>
 
   <section class="card">
-    <div class="row" style="margin-bottom:12px">
-      <h2 style="margin:0">번호 고정 / 제외 <span style="font-weight:400;color:var(--muted);font-size:13px">(선택)</span></h2>
+    <div class="row head">
+      <h2>역대 당첨번호 통계</h2>
+      <span class="spacer"></span>
+      <div class="seg" id="range">
+        <button data-n="0" class="on">전체</button>
+        <button data-n="100">최근 100회</button>
+        <button data-n="50">최근 50회</button>
+      </div>
+    </div>
+    <div class="latest" id="latest"></div>
+    <div class="chart" id="chart"></div>
+    <div class="rank">
+      <div><h3>가장 많이 나온 번호</h3><div class="balls" id="hot"></div></div>
+      <div><h3>가장 적게 나온 번호</h3><div class="balls" id="cold"></div></div>
+    </div>
+    <ul class="stat-list" id="patterns"></ul>
+  </section>
+
+  <section class="card">
+    <div class="row head">
+      <h2>번호 고정 / 제외 <span style="font-weight:400;color:var(--muted);font-size:13px">(선택)</span></h2>
       <span class="spacer"></span>
       <button class="ghost" id="reset">초기화</button>
     </div>
     <div class="grid" id="grid"></div>
-    <div class="legend">
-      <span>번호를 누를 때마다: 기본 → <span class="dot" style="background:var(--include)"></span>고정(최대 5개) → <span class="dot" style="border:2px solid var(--exclude)"></span>제외 → 기본</span>
-    </div>
+    <div class="hint">번호를 누를 때마다: 기본 → <span class="dot" style="background:var(--include)"></span>고정(최대 5개) → <span class="dot" style="border:2px solid var(--exclude)"></span>제외 → 기본</div>
   </section>
 
   <section class="card">
-    <div class="row">
-      <h2 style="margin:0">최근 기록</h2>
+    <div class="row head">
+      <h2>최근 기록</h2>
       <span class="spacer"></span>
       <button class="ghost" id="clearHist">기록 지우기</button>
     </div>
     <div id="history"></div>
   </section>
 
-  <p class="note">재미로만 이용하세요. 모든 번호 조합의 당첨 확률은 동일합니다 (1등 1/8,145,060).</p>
+  <p class="note">통계는 참고용이에요. 매 회차 추첨은 서로 독립이라 어떤 방식으로 골라도 1등 확률은 똑같이 1/8,145,060이에요.</p>
 </main>
 <div class="toast" id="toast"></div>
 
+<script src="data/draws.js"></script>
 <script>
+  // ───────── 데이터 ─────────
+  // LOTTO_DRAWS 원소: [회차, 추첨일, n1..n6, 보너스]
+  const DRAWS = (window.LOTTO_DRAWS || []).map(d => ({ round: d[0], date: d[1], nums: d.slice(2, 8), bonus: d[8] }));
+  const HAS_DATA = DRAWS.length > 0;
   const MAX_INCLUDE = 5;
   const HISTORY_KEY = 'lotto-history-v1';
   const state = new Array(46).fill(0); // 0: 기본, 1: 고정, 2: 제외
@@ -158,39 +231,103 @@
 
   const $ = (id) => document.getElementById(id);
   const colorClass = (n) => 'c' + Math.min(5, Math.ceil(n / 10));
+  const fmt = (n) => n.toLocaleString('ko-KR');
 
-  // 암호학적으로 안전한 난수로 [0, max) 정수 생성 (모듈로 편향 제거)
-  function randInt(max) {
-    const buf = new Uint32Array(1);
-    const limit = Math.floor(0x100000000 / max) * max;
-    let x;
-    do { crypto.getRandomValues(buf); x = buf[0]; } while (x >= limit);
-    return x % max;
+  function freqOf(draws) {
+    const f = new Array(46).fill(0);
+    for (const d of draws) for (const n of d.nums) f[n]++;
+    return f;
   }
 
-  function generateGame(include, exclude) {
+  // 조합 하나의 패턴 지표
+  function features(nums) {
+    const s = [...nums].sort((a, b) => a - b);
+    let run = 1, maxRun = 1;
+    for (let i = 1; i < 6; i++) { run = s[i] === s[i - 1] + 1 ? run + 1 : 1; maxRun = Math.max(maxRun, run); }
+    return {
+      sum: s.reduce((a, b) => a + b, 0),
+      odd: s.filter(n => n % 2).length,
+      low: s.filter(n => n <= 22).length,
+      maxRun,
+      decades: new Set(s.map(n => Math.min(4, Math.floor((n - 1) / 10)))).size,
+    };
+  }
+
+  // 역대 당첨번호에서 패턴 기준을 계산 (합계는 가운데 80% 구간)
+  const RULE = (() => {
+    if (!HAS_DATA) return null;
+    const sums = DRAWS.map(d => features(d.nums).sum).sort((a, b) => a - b);
+    const q = (p) => sums[Math.floor(p * (sums.length - 1))];
+    return { sumMin: q(0.1), sumMax: q(0.9), oddMin: 2, oddMax: 4, lowMin: 2, lowMax: 4, maxRun: 2, minDecades: 3 };
+  })();
+  const passes = (f) => f.sum >= RULE.sumMin && f.sum <= RULE.sumMax && f.odd >= RULE.oddMin && f.odd <= RULE.oddMax
+    && f.low >= RULE.lowMin && f.low <= RULE.lowMax && f.maxRun <= RULE.maxRun && f.decades >= RULE.minDecades;
+  const PAST_KEYS = new Set(DRAWS.map(d => [...d.nums].sort((a, b) => a - b).join(',')));
+
+  // ───────── 난수 ─────────
+  // 암호학적으로 안전한 [0,1) 실수
+  function rand() {
+    const buf = new Uint32Array(2);
+    crypto.getRandomValues(buf);
+    return (buf[0] * 2 ** 21 + (buf[1] >>> 11)) / 2 ** 53;
+  }
+
+  function weightsFor(mode) {
+    const w = new Array(46).fill(1);
+    if (!HAS_DATA || mode === 'random' || mode === 'pattern') return w;
+    const src = mode === 'recent' ? DRAWS.slice(-50) : DRAWS;
+    const f = freqOf(src);
+    const avg = src.length * 6 / 45;
+    for (let n = 1; n <= 45; n++) {
+      // 평균 대비 비율을 가중치로 사용 (+1 스무딩으로 0회 번호도 뽑힐 수 있게)
+      const r = (f[n] + 1) / (avg + 1);
+      w[n] = mode === 'cold' ? 1 / r : r;
+    }
+    return w;
+  }
+
+  // 가중치 비복원 추출
+  function draw(include, exclude, w) {
     const picked = new Set(include);
-    const pool = [];
-    for (let n = 1; n <= 45; n++) if (!picked.has(n) && !exclude.has(n)) pool.push(n);
-    // Fisher–Yates 부분 셔플
-    for (let i = 0; i < 6 - picked.size; i++) {
-      const j = i + randInt(pool.length - i);
-      [pool[i], pool[j]] = [pool[j], pool[i]];
-      picked.add(pool[i]);
+    while (picked.size < 6) {
+      const pool = [];
+      let total = 0;
+      for (let n = 1; n <= 45; n++) if (!picked.has(n) && !exclude.has(n)) { pool.push(n); total += w[n]; }
+      let r = rand() * total;
+      let pick = pool[pool.length - 1];
+      for (const n of pool) { r -= w[n]; if (r < 0) { pick = n; break; } }
+      picked.add(pick);
     }
     return [...picked].sort((a, b) => a - b);
   }
 
-  function ballHTML(n, extra = '', delay = 0) {
-    return `<div class="ball ${colorClass(n)} ${extra}" style="animation-delay:${delay}ms">${n}</div>`;
+  function generateGame(mode, include, exclude, w, taken) {
+    const usePattern = HAS_DATA && mode !== 'random';
+    for (let tries = 0; tries < 20000; tries++) {
+      const g = draw(include, exclude, w);
+      const key = g.join(',');
+      if (taken.has(key)) continue;                       // 같은 회차 안에서 중복 게임 방지
+      if (!usePattern) return { nums: g, relaxed: false };
+      if (PAST_KEYS.has(key)) continue;                   // 이미 1등 나왔던 조합 제외
+      if (passes(features(g))) return { nums: g, relaxed: false };
+    }
+    return { nums: draw(include, exclude, w), relaxed: true }; // 고정/제외 때문에 조건을 못 맞춘 경우
   }
 
-  function render(games, include) {
-    $('result').innerHTML = games.map((g, gi) => `
-      <div class="game">
-        <div class="tag">${String.fromCharCode(65 + gi)}</div>
-        <div class="balls">${g.map((n, i) => ballHTML(n, include.includes(n) ? 'fixed' : '', gi * 120 + i * 60)).join('')}</div>
-      </div>`).join('');
+  // 과거 당첨번호와 가장 많이 겹친 회차
+  function bestPastMatch(nums) {
+    let best = { k: 0, round: null };
+    const set = new Set(nums);
+    for (let i = DRAWS.length - 1; i >= 0; i--) {
+      const k = DRAWS[i].nums.filter(n => set.has(n)).length;
+      if (k > best.k) best = { k, round: DRAWS[i].round };
+    }
+    return best;
+  }
+
+  // ───────── 생성 & 결과 ─────────
+  function ballHTML(n, extra = '', delay = 0) {
+    return `<div class="ball ${colorClass(n)} ${extra}" style="animation-delay:${delay}ms">${n}</div>`;
   }
 
   function generate() {
@@ -200,12 +337,114 @@
       if (state[n] === 2) exclude.add(n);
     }
     if (45 - exclude.size < 6) { toast('제외 번호가 너무 많아요 (최소 6개는 남겨야 해요)'); return; }
+    const mode = $('mode').value;
     const count = Number($('count').value);
-    lastGames = Array.from({ length: count }, () => generateGame(include, exclude));
-    render(lastGames, include);
+    const w = weightsFor(mode);
+    const taken = new Set();
+    const games = [];
+    for (let i = 0; i < count; i++) {
+      const g = generateGame(mode, include, exclude, w, taken);
+      taken.add(g.nums.join(','));
+      games.push(g);
+    }
+    lastGames = games.map(g => g.nums);
+    renderResult(games, include);
     saveHistory(lastGames);
   }
 
+  function renderResult(games, include) {
+    $('result').innerHTML = games.map((g, gi) => {
+      let meta = '';
+      if (HAS_DATA) {
+        const f = features(g.nums);
+        const m = bestPastMatch(g.nums);
+        meta = `<div class="meta">합계 <b>${f.sum}</b> · 홀짝 <b>${f.odd}:${6 - f.odd}</b> · 저고 <b>${f.low}:${6 - f.low}</b>`
+          + (m.round ? ` · 과거 최다 일치 <b>${m.k}개</b> (${m.round}회)` : '')
+          + (g.relaxed ? ' · <span style="color:var(--exclude)">고정/제외 조건 때문에 패턴 기준을 적용하지 못했어요</span>' : '')
+          + `</div>`;
+      }
+      return `<div class="game">
+        <div class="game-top"><div class="tag">${String.fromCharCode(65 + gi)}</div>
+        <div class="balls">${g.nums.map((n, i) => ballHTML(n, include.includes(n) ? 'fixed' : '', gi * 120 + i * 60)).join('')}</div></div>
+        ${meta}</div>`;
+    }).join('');
+  }
+
+  const MODE_HINT = {
+    pattern: () => RULE && `역대 1등 번호 대부분이 속한 범위로 걸러요: 합계 ${RULE.sumMin}~${RULE.sumMax}, 홀짝·저고(1~22/23~45) 2:4~4:2, 3연속 번호 없음, 3개 이상 번대에 분산, 과거 1등 조합과 중복 없음.`,
+    hot: () => '역대 출현 횟수가 많은 번호일수록 더 잘 뽑히게 가중치를 줘요. 패턴 기준도 함께 적용해요.',
+    cold: () => '역대 출현 횟수가 적은 번호일수록 더 잘 뽑히게 가중치를 줘요. 패턴 기준도 함께 적용해요.',
+    recent: () => '최근 50회에 자주 나온 번호에 가중치를 줘요. 패턴 기준도 함께 적용해요.',
+    random: () => '1~45에서 동일한 확률로 6개를 뽑아요.',
+  };
+  function updateHint() {
+    $('modeHint').textContent = HAS_DATA ? MODE_HINT[$('mode').value]()
+      : '당첨번호 데이터(data/draws.js)를 찾지 못해 완전 무작위로만 생성해요.';
+  }
+
+  // ───────── 통계 ─────────
+  let range = 0;
+  function renderStats() {
+    if (!HAS_DATA) { $('chart').innerHTML = '<div class="empty">데이터가 없어요</div>'; return; }
+    const last = DRAWS[DRAWS.length - 1];
+    $('latest').innerHTML = `
+      <div class="info"><b>${last.round}회</b> 당첨번호 (${last.date})</div>
+      <div class="balls">${last.nums.map(n => ballHTML(n, 'sm')).join('')}<span class="plus">+</span>${ballHTML(last.bonus, 'sm')}</div>`;
+
+    const src = range ? DRAWS.slice(-range) : DRAWS;
+    const f = freqOf(src);
+    const max = Math.max(...f.slice(1));
+    const avg = src.length * 6 / 45;
+    const step = niceStep(max);
+    const top = Math.ceil(max / step) * step;
+    let html = '<div class="plot">';
+    for (let v = 0; v <= top; v += step) html += `<div class="gridline" style="bottom:${v / top * 100}%"><span>${v}</span></div>`;
+    html += `<div class="avgline" style="bottom:${avg / top * 100}%"></div><div class="bars">`;
+    for (let n = 1; n <= 45; n++) html += `<div class="bar-hit" data-n="${n}"><div class="bar" style="height:${f[n] / top * 100}%"></div></div>`;
+    html += '</div><div class="tip" id="tip"></div></div><div class="xlabels">';
+    for (let n = 1; n <= 45; n++) html += `<span class="${n === 1 || n % 5 === 0 ? 'major' : ''}">${n}</span>`;
+    html += `</div><div class="chart-legend"><i></i>평균 ${avg.toFixed(1)}회 (번호별 출현 횟수, 막대에 마우스를 올리면 자세히 보여요)</div>`;
+    $('chart').innerHTML = html;
+
+    const plot = $('chart').querySelector('.plot');
+    plot.querySelectorAll('.bar-hit').forEach(el => {
+      el.addEventListener('mouseenter', () => {
+        const n = +el.dataset.n;
+        const tip = $('tip');
+        const pct = (f[n] / src.length * 100).toFixed(1);
+        tip.innerHTML = `<b>${n}번</b> · ${f[n]}회 (${pct}% 회차에 등장)`;
+        const r = el.getBoundingClientRect(), pr = plot.getBoundingClientRect();
+        const x = Math.min(Math.max(r.left + r.width / 2 - pr.left, 80), pr.width - 80);
+        tip.style.left = x + 'px';
+        tip.style.top = (pr.height * (1 - f[n] / top) - 6) + 'px';
+        tip.style.opacity = 1;
+      });
+      el.addEventListener('mouseleave', () => { $('tip').style.opacity = 0; });
+    });
+
+    const order = [...Array(45)].map((_, i) => i + 1).sort((a, b) => f[b] - f[a] || a - b);
+    $('hot').innerHTML = order.slice(0, 6).map(n => `<div title="${f[n]}회">${ballHTML(n, 'sm')}</div>`).join('');
+    $('cold').innerHTML = order.slice(-6).reverse().map(n => `<div title="${f[n]}회">${ballHTML(n, 'sm')}</div>`).join('');
+
+    // 패턴 통계 (기간 내)
+    const feats = src.map(d => features(d.nums));
+    const share = (fn) => (feats.filter(fn).length / feats.length * 100).toFixed(0) + '%';
+    const avgSum = (feats.reduce((a, x) => a + x.sum, 0) / feats.length).toFixed(1);
+    const withRun = share(x => x.maxRun >= 2);
+    $('patterns').innerHTML = `
+      <li><span>분석 회차</span><span>${src[0].round}회 ~ ${last.round}회 (${fmt(src.length)}회)</span></li>
+      <li><span>당첨번호 합계 평균</span><span>${avgSum} (가운데 80%: ${RULE.sumMin}~${RULE.sumMax})</span></li>
+      <li><span>홀짝 2:4 ~ 4:2 비율</span><span>${share(x => x.odd >= 2 && x.odd <= 4)}</span></li>
+      <li><span>연속 번호가 1쌍 이상 있는 회차</span><span>${withRun}</span></li>
+      <li><span>패턴 맞춤 기준을 모두 만족한 회차</span><span>${share(passes)}</span></li>`;
+  }
+  function niceStep(max) {
+    const raw = max / 4;
+    const p = 10 ** Math.floor(Math.log10(raw));
+    return [1, 2, 5, 10].map(m => m * p).find(s => s >= raw);
+  }
+
+  // ───────── 번호판 / 기록 / 기타 ─────────
   function renderGrid() {
     $('grid').innerHTML = '';
     for (let n = 1; n <= 45; n++) {
@@ -215,14 +454,8 @@
       b.title = ['기본', '고정', '제외'][state[n]];
       b.onclick = () => {
         let next = (state[n] + 1) % 3;
-        if (next === 1 && state.filter(s => s === 1).length >= MAX_INCLUDE) {
-          toast(`고정 번호는 최대 ${MAX_INCLUDE}개까지예요`);
-          next = 2;
-        }
-        if (next === 2 && state.filter(s => s === 2).length >= 39) {
-          toast('제외 번호는 최대 39개까지예요');
-          next = 0;
-        }
+        if (next === 1 && state.filter(s => s === 1).length >= MAX_INCLUDE) { toast(`고정 번호는 최대 ${MAX_INCLUDE}개까지예요`); next = 2; }
+        if (next === 2 && state.filter(s => s === 2).length >= 39) { toast('제외 번호는 최대 39개까지예요'); next = 0; }
         state[n] = next;
         renderGrid();
       };
@@ -257,6 +490,8 @@
   }
 
   $('gen').onclick = generate;
+  $('count').onchange = generate;
+  $('mode').onchange = () => { updateHint(); generate(); };
   $('reset').onclick = () => { state.fill(0); renderGrid(); };
   $('clearHist').onclick = () => { try { localStorage.removeItem(HISTORY_KEY); } catch {} renderHistory(); };
   $('copy').onclick = async () => {
@@ -265,15 +500,24 @@
     try { await navigator.clipboard.writeText(text); toast('복사했어요'); }
     catch { toast('복사에 실패했어요'); }
   };
-  document.addEventListener('keydown', (e) => {
-    if ((e.key === 'Enter' || e.key === ' ') && e.target === document.body) { e.preventDefault(); generate(); }
+  $('range').querySelectorAll('button').forEach(b => b.onclick = () => {
+    $('range').querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    range = +b.dataset.n;
+    renderStats();
   });
 
-  $('count').onchange = generate;
-
+  if (HAS_DATA) {
+    const last = DRAWS[DRAWS.length - 1];
+    $('sub').textContent = `1회~${last.round}회(${last.date}) 역대 당첨번호 ${fmt(DRAWS.length)}회차 통계를 반영해 번호를 뽑아요.`;
+  } else {
+    $('mode').value = 'random';
+    $('mode').disabled = true;
+  }
+  updateHint();
   renderGrid();
+  renderStats();
   renderHistory();
-  generate(); // 페이지를 열면 바로 자동 생성
+  generate();
 </script>
 </body>
 </html>
