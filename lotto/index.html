@@ -136,6 +136,18 @@
   .badge { font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--grid); color: var(--muted); }
   .badge.win { background: var(--include); color: #fff; }
   .badge.big { background: #e8590c; color: #fff; }
+  .countdown { text-align: center; padding: 22px 20px; }
+  .cd-label { font-size: 15px; color: var(--muted); }
+  .cd-label b { color: var(--text); }
+  .cd-time {
+    font-size: 44px; font-weight: 800; letter-spacing: 1px; margin: 4px 0;
+    font-variant-numeric: tabular-nums; color: var(--accent);
+  }
+  .cd-time .unit { font-size: 22px; font-weight: 700; color: var(--muted); margin: 0 6px 0 2px; }
+  .cd-sub { font-size: 13px; color: var(--muted); }
+  .countdown.closed .cd-time { color: #e8590c; }
+  .countdown.live .cd-time { font-size: 28px; color: var(--include); }
+  @media (max-width: 560px) { .cd-time { font-size: 34px; } .cd-time .unit { font-size: 18px; } }
   #banner:empty { display: none; }
   #banner {
     border-radius: 14px; padding: 14px 18px; margin-bottom: 16px; font-size: 15px;
@@ -167,6 +179,11 @@
   </a>
   <h1>🎱 로또 6/45 번호 생성기</h1>
   <p class="sub" id="sub">역대 당첨번호 통계를 반영해 번호를 뽑아요.</p>
+  <section class="card countdown" id="countdown">
+    <div class="cd-label" id="cdLabel">다음 추첨까지</div>
+    <div class="cd-time" id="cdTime" aria-live="off">--:--:--</div>
+    <div class="cd-sub" id="cdSub"></div>
+  </section>
   <div id="banner"></div>
 
   <section class="card">
@@ -499,6 +516,43 @@
   // 추첨(20:35) 후 결과가 나올 만한 시각: 토요일 21:00 KST
   const resultTime = (r) => CUTOFF_1 + (r - 1) * WEEK + 60 * 60e3;
 
+  // ───────── 추첨 카운트다운 ─────────
+  // 매주 토요일 20:00 판매 마감, 20:35 추첨 (KST). 추첨 후 30분간은 '추첨 진행 중' 표시
+  const drawTime = (r) => CUTOFF_1 + (r - 1) * WEEK + 35 * 60e3;
+  const LIVE_MS = 30 * 60e3;
+  const kst = (t, opt) => new Date(t).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', ...opt });
+  const pad = (n) => String(n).padStart(2, '0');
+  let cdRound = 0;
+
+  function tickCountdown() {
+    const now = Date.now();
+    let r = Math.max(1, Math.floor((now - drawTime(1)) / WEEK) + 1);
+    while (drawTime(r) + LIVE_MS <= now) r++;
+    const box = $('countdown');
+    const draw = drawTime(r), cutoff = CUTOFF_1 + (r - 1) * WEEK;
+
+    if (r !== cdRound) {
+      const prev = cdRound;
+      cdRound = r;
+      $('cdSub').textContent = `${kst(draw, { month: 'long', day: 'numeric', weekday: 'short' })} 오후 8:35 추첨 · 판매 마감 오후 8:00`;
+      if (prev) renderHistory(); // 페이지를 켜 둔 채 회차가 넘어가면 '추첨 전' 상태 갱신
+    }
+
+    if (now >= draw) {
+      box.className = 'card countdown live';
+      $('cdLabel').innerHTML = `<b>${r}회</b>`;
+      $('cdTime').textContent = '🎱 추첨 진행 중';
+      return;
+    }
+    const left = draw - now;
+    const s = Math.floor(left / 1000);
+    const d = Math.floor(s / 86400), h = Math.floor(s % 86400 / 3600), m = Math.floor(s % 3600 / 60), sec = s % 60;
+    const closed = now >= cutoff;
+    box.className = 'card countdown' + (closed ? ' closed' : '');
+    $('cdLabel').innerHTML = closed ? `<b>${r}회</b> 판매 마감 · 추첨까지` : `<b>${r}회</b> 추첨까지`;
+    $('cdTime').innerHTML = (d ? `${d}<span class="unit">일</span>` : '') + `${pad(h)}:${pad(m)}:${pad(sec)}`;
+  }
+
   const RANK_LABEL = ['낙첨', '1등', '2등', '3등', '4등', '5등'];
   function rankOf(nums, d) {
     const hit = nums.filter(n => d.nums.includes(n)).length;
@@ -631,6 +685,8 @@
     $('mode').disabled = true;
   }
   updateHint();
+  tickCountdown();
+  setInterval(tickCountdown, 1000);
   renderGrid();
   renderStats();
   renderHistory();
